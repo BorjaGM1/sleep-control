@@ -1,15 +1,15 @@
 # Sleep Control
 
-Tiny macOS menu bar app for keeping your Mac awake.
+Sleep Control is a tiny macOS menu bar app for the annoying case where a MacBook goes to sleep in the middle of a long local task.
 
-It gives you two toggles:
+It exposes two keep-awake controls in one place:
 
 - `No Sleep`: runs `pmset -a disablesleep 1`
 - `StayAwake`: runs `caffeinate -dimsu`
 
-This app is intentionally small and local-first. It is unsigned for public distribution, not notarized, and not intended for the Mac App Store.
+It is intentionally small, local-first, and built with plain AppKit. No background service, no settings screen, no extra cruft.
 
-## What It Does
+## Features
 
 - Adds a menu bar icon with live status
 - Toggles `No Sleep` with an admin prompt
@@ -19,34 +19,26 @@ This app is intentionally small and local-first. It is unsigned for public distr
 
 ## Why This Exists
 
-On a MacBook, closing the lid normally triggers `Clamshell Sleep`. That is fine for normal laptop use, but annoying when you want a long-running local task to keep going.
-
-Sleep Control wraps the two most useful local controls in one menu bar app:
-
-- `pmset disablesleep` for the aggressive system-wide switch
-- `caffeinate` for the standard keep-awake assertion
+On a MacBook, closing the lid normally triggers `Clamshell Sleep`. That is fine for normal laptop use, but not when you want a local job to keep running. Sleep Control wraps the two most useful built-in controls behind a single menu bar toggle set.
 
 ## Safety
 
 `No Sleep` uses the hidden `pmset disablesleep` switch. That can keep a Mac awake even with the lid closed.
-
-Use it carefully:
 
 - Do not put the Mac in a bag while it is closed and awake.
 - Expect higher battery drain and more heat.
 - Turn it off when you are done.
 - Treat this as a practical power-user tool, not a safe default.
 
-## Download
+## Install
 
-If the repo has a GitHub Release, download the latest `Sleep Control-macos-unsigned.zip`, unzip it, and move `Sleep Control.app` wherever you want.
+### Download a release
 
-Because the app is unsigned for public distribution:
+Download the latest `Sleep Control-macos-unsigned.zip` from Releases, unzip it, and move `Sleep Control.app` wherever you want.
 
-- macOS may warn on first launch
-- if needed, right-click the app and choose `Open`
+The app is unsigned for public distribution, so macOS may warn on first launch. If that happens, right-click the app and choose `Open`.
 
-## Build
+### Build from source
 
 Requirements:
 
@@ -103,7 +95,7 @@ dist/Sleep Control-macos-unsigned.zip.sha256
 
 ## Releases
 
-This repo includes GitHub Actions for:
+The repo includes GitHub Actions for:
 
 - macOS build verification on pushes and pull requests
 - artifact uploads for packaged builds
@@ -115,14 +107,6 @@ To publish a release:
 git tag -a v1.0.0 -m "Sleep Control v1.0.0"
 git push origin v1.0.0
 ```
-
-## Project Files
-
-- `main.swift`: AppKit status bar app
-- `Info.plist`: app bundle metadata
-- `build.zsh`: builds `Sleep Control.app`
-- `install.zsh`: installs into `~/Applications`
-- `package.zsh`: creates the release zip
 
 ## License
 
