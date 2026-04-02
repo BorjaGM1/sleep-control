@@ -1,109 +1,128 @@
 # Sleep Control
 
-Tiny macOS menu bar app for two things:
+Tiny macOS menu bar app for keeping your Mac awake.
 
-- `No Sleep`: toggles `pmset -a disablesleep`
+It gives you two toggles:
+
+- `No Sleep`: runs `pmset -a disablesleep 1`
 - `StayAwake`: runs `caffeinate -dimsu`
 
-This is a small AppKit utility meant to be practical, not polished. It is distributed outside the Mac App Store and is not notarized.
+This app is intentionally small and local-first. It is unsigned for public distribution, not notarized, and not intended for the Mac App Store.
 
 ## What It Does
 
-- Shows a menu bar icon with current state
-- Lets you toggle `No Sleep` with an admin prompt
-- Lets you toggle `StayAwake` without opening Terminal
+- Adds a menu bar icon with live status
+- Toggles `No Sleep` with an admin prompt
+- Toggles `StayAwake` without opening Terminal
 - Shows current power source
 - Lets you turn both features off with one click
 
+## Why This Exists
+
+On a MacBook, closing the lid normally triggers `Clamshell Sleep`. That is fine for normal laptop use, but annoying when you want a long-running local task to keep going.
+
+Sleep Control wraps the two most useful local controls in one menu bar app:
+
+- `pmset disablesleep` for the aggressive system-wide switch
+- `caffeinate` for the standard keep-awake assertion
+
 ## Safety
 
-`No Sleep` uses the hidden `pmset disablesleep` switch. That can keep a Mac awake even when the lid is closed.
+`No Sleep` uses the hidden `pmset disablesleep` switch. That can keep a Mac awake even with the lid closed.
 
 Use it carefully:
 
-- do not put the Mac in a bag while it is closed and awake
-- expect higher battery drain and heat
-- turn it off when you are done
+- Do not put the Mac in a bag while it is closed and awake.
+- Expect higher battery drain and more heat.
+- Turn it off when you are done.
+- Treat this as a practical power-user tool, not a safe default.
 
-## Requirements
+## Download
 
-- macOS with Apple Command Line Tools installed
+If the repo has a GitHub Release, download the latest `Sleep Control-macos-unsigned.zip`, unzip it, and move `Sleep Control.app` wherever you want.
+
+Because the app is unsigned for public distribution:
+
+- macOS may warn on first launch
+- if needed, right-click the app and choose `Open`
+
+## Build
+
+Requirements:
+
+- macOS
+- Apple Command Line Tools
 - `swiftc`
 - `xcrun`
 
-You can check quickly with:
+Quick check:
 
 ```bash
 swiftc --version
 xcrun --show-sdk-path
 ```
 
-## Build
+Build the app:
 
 ```bash
 ./build.zsh
 ```
 
-That creates:
+Output:
 
 ```text
 build/Sleep Control.app
 ```
 
-## Install
+Install locally:
 
 ```bash
 ./install.zsh
 ```
 
-That copies the app to:
-
-```text
-~/Applications/Sleep Control.app
-```
-
-To install and launch immediately:
+Install and launch:
 
 ```bash
 ./install.zsh --launch
 ```
 
-## Package For Sharing
+## Packaging
+
+Create a shareable zip:
 
 ```bash
 ./package.zsh
 ```
 
-That creates:
+Outputs:
 
 ```text
 dist/Sleep Control-macos-unsigned.zip
 dist/Sleep Control-macos-unsigned.zip.sha256
 ```
 
-That zip is the easiest thing to upload to a GitHub Release.
+## Releases
 
-## Share It
+This repo includes GitHub Actions for:
 
-Simplest path:
+- macOS build verification on pushes and pull requests
+- artifact uploads for packaged builds
+- automatic GitHub Releases when you push a tag like `v1.0.0`
 
-1. Push this folder to GitHub.
-2. Run `./package.zsh`.
-3. Upload the zip from `dist/` to a GitHub Release.
+To publish a release:
 
-Notes for people downloading it:
+```bash
+git tag -a v1.0.0 -m "Sleep Control v1.0.0"
+git push origin v1.0.0
+```
 
-- the app is unsigned/ad-hoc signed, not notarized
-- macOS may warn on first launch
-- if needed, right-click the app and choose `Open`
+## Project Files
 
-## Files
-
-- `main.swift`: app source
-- `Info.plist`: bundle metadata
-- `build.zsh`: build into `./build`
-- `install.zsh`: copy into `~/Applications`
-- `package.zsh`: create release zip
+- `main.swift`: AppKit status bar app
+- `Info.plist`: app bundle metadata
+- `build.zsh`: builds `Sleep Control.app`
+- `install.zsh`: installs into `~/Applications`
+- `package.zsh`: creates the release zip
 
 ## License
 
