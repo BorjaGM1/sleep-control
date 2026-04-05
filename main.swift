@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let powerSourceItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 
     private let pidFile = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".stayawake.pid")
+    private let stayAwakeCommand = "/usr/bin/caffeinate"
+    private let stayAwakeArguments = ["-dimsu"]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -135,13 +137,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func stayAwakeRunning() -> Bool {
-        guard let pid = stayAwakePID() else { return false }
-        if kill(pid, 0) == 0 {
-            return true
-        }
-
-        try? FileManager.default.removeItem(at: pidFile)
-        return false
+        let pids = stayAwakePIDs()
+        syncStayAwakePIDFile(with: pids)
+        return !pids.isEmpty
     }
 
     private func stayAwakePID() -> pid_t? {
@@ -154,6 +152,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return nil
         }
         return value
+    }
+
+    private func stayAwakePIDs() -> [pid_t] {
+        var pids = Set<pid_t>()
+
+        if let pid = stayAwakePID(), processMatchesStayAwake(pid: pid), kill(pid, 0) == 0 {
+            pids.insert(pid)
+        }
+
+        guard let output = shell("/bin/ps", ["-axo", "pid=,command="]) else {
+            return Array(pids)
+        }
+
+        for line in output.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+
+            let parts = trimmed.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+            guard parts.count == 2, let pid = Int32(parts[0]) else { continue }
+
+            let command = String(parts[1]).trimmingCharacters(in: .whitespaces)
+            if isStayAwakeCommand(command) {
+                pids.insert(pid)
+            }
+        }
+
+        return Array(pids).sorted()
+    }
+
+    private func syncStayAwakePIDFile(with pids: [pid_t]) {
+        guard let pid = pids.first else {
+            try? FileManager.default.removeItem(at: pidFile)
+            return
+        }
+
+        let pidText = "\(pid)\n"
+        try? pidText.write(to: pidFile, atomically: true, encoding: .utf8)
+    }
+
+    private func processMatchesStayAwake(pid: pid_t) -> Bool {
+        guard let output = shell("/bin/ps", ["-p", String(pid), "-o", "command="]) else {
+            return false
+        }
+
+        return output
+            .split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .contains(where: isStayAwakeCommand)
+    }
+
+    private func isStayAwakeCommand(_ command: String) -> Bool {
+        let normalized = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalized == ([stayAwakeCommand] + stayAwakeArguments).joined(separator: " ") {
+            return true
+        }
+
+        return normalized.hasSuffix("caffeinate -dimsu")
     }
 
     @objc
@@ -189,9 +244,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func startStayAwake() {
+        if stayAwakeRunning() {
+            return
+        }
+
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/caffeinate")
-        process.arguments = ["-dimsu"]
+        process.executableURL = URL(fileURLWithPath: stayAwakeCommand)
+        process.arguments = stayAwakeArguments
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
@@ -206,16 +265,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func stopStayAwake() {
-        guard let pid = stayAwakePID() else {
+        let pids = stayAwakePIDs()
+        guard !pids.isEmpty else {
             try? FileManager.default.removeItem(at: pidFile)
             return
         }
 
-        if kill(pid, SIGTERM) != 0 && errno != ESRCH {
-            showError("Failed to stop StayAwake.", details: String(cString: strerror(errno)))
+        var failures: [String] = []
+
+        for pid in pids {
+            if kill(pid, SIGTERM) != 0 && errno != ESRCH {
+                failures.append("PID \(pid): \(String(cString: strerror(errno)))")
+            }
         }
 
         try? FileManager.default.removeItem(at: pidFile)
+
+        if !failures.isEmpty {
+            showError("Failed to stop StayAwake.", details: failures.joined(separator: "\n"))
+        }
     }
 
     private func runNoSleepCommand(_ target: String) {
